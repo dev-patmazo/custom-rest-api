@@ -1,0 +1,41 @@
+# Environment Configuration
+dev:
+  active: "false"
+  server:
+    host: "localhost"
+    port: "8080"
+  database:
+    user: "admin"
+    pass: ""
+    port: "27017"
+    dbname: "sample"
+qa:
+  active: "true"
+  server:
+    host: "localhost"
+    port: "9090"
+  database:
+    user: "admin"
+    pass: ""
+    port: "27017"
+    dbname: "sample"
+stg:
+  active: "false"
+  server:
+    host: "localhost"
+    port: "8888"
+  database:
+    user: "admin"
+    pass: ""
+    port: "27017"
+    dbname: "sample"
+prod:
+  active: "false"
+  server:
+    host: "localhost"
+    port: "9999"
+  database:
+    user: "admin"
+    pass: ""
+    port: "27017"
+    dbname: "sample"
