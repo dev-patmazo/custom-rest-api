@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pelletier/go-toml"
 	"gopkg.in/yaml.v2"
 )
 
@@ -23,75 +24,96 @@ type Database struct {
 
 type Config struct {
 	Dev struct {
-		Active   string
 		Server   *Server   `yaml:"server"`
 		Database *Database `yaml:"database"`
 	} `yaml:"dev"`
 
 	Qa struct {
-		Active   string
 		Server   *Server   `yaml:"server"`
 		Database *Database `yaml:"database"`
 	} `yaml:"qa"`
 
 	Stg struct {
-		Active   string
 		Server   *Server   `yaml:"server"`
 		Database *Database `yaml:"database"`
 	} `yaml:"stg"`
 
 	Prod struct {
-		Active   string
 		Server   *Server   `yaml:"server"`
 		Database *Database `yaml:"database"`
 	} `yaml:"prod"`
 }
 
 type ConfigTemplate struct {
-	Active   string
 	Server   *Server   `yaml:"server"`
 	Database *Database `yaml:"database"`
 }
 
-var cfg Config
-var cfgTemplate ConfigTemplate
-var basePath = "../rest-api/config/config.yaml"
+type Environment struct {
+	Env string
+}
+
+var (
+	cfgMap      Config
+	cfgTemplate ConfigTemplate
+	envMap      Environment
+	basePath    = "../rest-api/"
+	configPath  = basePath + "config/config.yaml"
+	envPath     = basePath + ".air.conf"
+)
 
 func InitializeConfig() (config ConfigTemplate) {
 
-	//Open file
-	file, err := filepath.Abs(basePath)
-	if err != nil {
-		processError(err)
+	//Open config file
+	cfg, cfgErr := filepath.Abs(configPath)
+	if cfgErr != nil {
+		processError(cfgErr)
 	}
 
-	//Read file
-	fileContent, errFile := ioutil.ReadFile(file)
-	if errFile != nil {
-		processError(errFile)
+	//Read config file
+	cfgCons, cfgConsErr := ioutil.ReadFile(cfg)
+	if cfgConsErr != nil {
+		processError(cfgConsErr)
 	}
 
-	//Parse file content
-	parseErr := yaml.Unmarshal(fileContent, &cfg)
-	if parseErr != nil {
-		processError(err)
+	//Parse config file content
+	cfgRawErr := yaml.Unmarshal(cfgCons, &cfgMap)
+	if cfgRawErr != nil {
+		processError(cfgRawErr)
 	}
 
-	//Check environment
-	if cfg.Dev.Active == "true" {
-		cfgTemplate = cfg.Dev
+	//Open environment file
+	env, envErr := filepath.Abs(envPath)
+	if envErr != nil {
+		processError(envErr)
+	}
+
+	//Read environment file
+	envCons, envConsErr := ioutil.ReadFile(env)
+	if envConsErr != nil {
+		processError(envConsErr)
+	}
+
+	//Parse environment file content
+	envRawErr := toml.Unmarshal(envCons, &envMap)
+	if envRawErr != nil {
+		processError(envRawErr)
+	}
+
+	if envMap.Env == "dev" {
+		cfgTemplate = cfgMap.Dev
 		return cfgTemplate
 	}
-	if cfg.Qa.Active == "true" {
-		cfgTemplate = cfg.Qa
+	if envMap.Env == "qa" {
+		cfgTemplate = cfgMap.Qa
 		return cfgTemplate
 	}
-	if cfg.Stg.Active == "true" {
-		cfgTemplate = cfg.Stg
+	if envMap.Env == "stg" {
+		cfgTemplate = cfgMap.Stg
 		return cfgTemplate
 	}
-	if cfg.Prod.Active == "true" {
-		cfgTemplate = cfg.Prod
+	if envMap.Env == "prod" {
+		cfgTemplate = cfgMap.Prod
 		return cfgTemplate
 	}
 
