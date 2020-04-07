@@ -28,6 +28,7 @@ Install or pull all required dependencies.
 2. go get github.com/pelletier/go-toml
 3. go get gopkg.in/yaml.v2
 4. go get -u github.com/cosmtrek/air
+5. go get github.com/sirupsen/logrus
 ```
 
 ### Deployment

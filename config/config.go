@@ -1,14 +1,17 @@
 package config
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/pelletier/go-toml"
 	"gopkg.in/yaml.v2"
 )
+
+var logger = Logger()
 
 type Server struct {
 	Host string `yaml:"host"`
@@ -62,7 +65,9 @@ var (
 	envPath     = basePath + ".air.conf"
 )
 
-func InitializeConfig() (config ConfigTemplate) {
+func init() {
+
+	logrus.SetLevel(logrus.WarnLevel)
 
 	//Open config file
 	cfg, cfgErr := filepath.Abs(configPath)
@@ -102,25 +107,38 @@ func InitializeConfig() (config ConfigTemplate) {
 
 	if envMap.Env == "dev" {
 		cfgTemplate = cfgMap.Dev
-		return cfgTemplate
 	}
 	if envMap.Env == "qa" {
 		cfgTemplate = cfgMap.Qa
-		return cfgTemplate
 	}
 	if envMap.Env == "stg" {
 		cfgTemplate = cfgMap.Stg
-		return cfgTemplate
 	}
 	if envMap.Env == "prod" {
 		cfgTemplate = cfgMap.Prod
-		return cfgTemplate
 	}
 
+}
+
+func InitializeConfig() (config ConfigTemplate) {
+
 	return cfgTemplate
+
 }
 
 func processError(err error) {
-	fmt.Println(err)
+	logger.Error(err)
 	os.Exit(2)
+}
+
+func Logger() *logrus.Logger {
+
+	if envMap.Env == "prod" {
+		log := logrus.New()
+		log.SetLevel(logrus.PanicLevel)
+		return log
+	}
+
+	return logrus.New()
+
 }
