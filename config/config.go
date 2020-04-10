@@ -2,7 +2,6 @@ package config
 
 import (
 	"io/ioutil"
-	"os"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -72,37 +71,37 @@ func init() {
 	//Open config file
 	cfg, cfgErr := filepath.Abs(configPath)
 	if cfgErr != nil {
-		processError(cfgErr)
+		logger.Error(cfgErr)
 	}
 
 	//Read config file
 	cfgCons, cfgConsErr := ioutil.ReadFile(cfg)
 	if cfgConsErr != nil {
-		processError(cfgConsErr)
+		logger.Error(cfgConsErr)
 	}
 
 	//Parse config file content
 	cfgRawErr := yaml.Unmarshal(cfgCons, &cfgMap)
 	if cfgRawErr != nil {
-		processError(cfgRawErr)
+		logger.Error(cfgRawErr)
 	}
 
 	//Open environment file
 	env, envErr := filepath.Abs(envPath)
 	if envErr != nil {
-		processError(envErr)
+		logger.Error(envErr)
 	}
 
 	//Read environment file
 	envCons, envConsErr := ioutil.ReadFile(env)
 	if envConsErr != nil {
-		processError(envConsErr)
+		logger.Error(envConsErr)
 	}
 
 	//Parse environment file content
 	envRawErr := toml.Unmarshal(envCons, &envMap)
 	if envRawErr != nil {
-		processError(envRawErr)
+		logger.Error(envRawErr)
 	}
 
 	if envMap.Env == "dev" {
@@ -121,24 +120,14 @@ func init() {
 }
 
 func InitializeConfig() (config ConfigTemplate) {
-
 	return cfgTemplate
-
-}
-
-func processError(err error) {
-	logger.Error(err)
-	os.Exit(2)
 }
 
 func Logger() *logrus.Logger {
-
 	if envMap.Env == "prod" {
 		log := logrus.New()
 		log.SetLevel(logrus.PanicLevel)
 		return log
 	}
-
 	return logrus.New()
-
 }
