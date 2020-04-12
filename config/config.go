@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/pelletier/go-toml"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -74,37 +75,37 @@ func SetEnvConfig() {
 	//Open config file
 	cfg, cfgErr := filepath.Abs(configPath)
 	if cfgErr != nil {
-		logrus.Error(cfgErr)
+		log.Error(cfgErr)
 	}
 
 	//Read config file
 	cfgCons, cfgConsErr := ioutil.ReadFile(cfg)
 	if cfgConsErr != nil {
-		logrus.Error(cfgConsErr)
+		log.Error(cfgConsErr)
 	}
 
 	//Parse config file content
 	cfgRawErr := yaml.Unmarshal(cfgCons, &cfgMap)
 	if cfgRawErr != nil {
-		logrus.Error(cfgRawErr)
+		log.Error(cfgRawErr)
 	}
 
 	//Open environment file
 	env, envErr := filepath.Abs(envPath)
 	if envErr != nil {
-		logrus.Error(envErr)
+		log.Error(envErr)
 	}
 
 	//Read environment file
 	envCons, envConsErr := ioutil.ReadFile(env)
 	if envConsErr != nil {
-		logrus.Error(envConsErr)
+		log.Error(envConsErr)
 	}
 
 	//Parse environment file content
 	envRawErr := toml.Unmarshal(envCons, &envMap)
 	if envRawErr != nil {
-		logrus.Error(envRawErr)
+		log.Error(envRawErr)
 	}
 
 	if envMap.Env == "dev" {
@@ -120,41 +121,48 @@ func SetEnvConfig() {
 		cfgTemplate = cfgMap.Prod
 	}
 
-	logrus.Info("Setting up environment config...")
-
+	log.Info("Setting up environment config...")
 }
 
 func SetDBCOnfig() {
-	logrus.Info("Setting up database connection...")
+	log.Info("Setting up database connection...")
 	var dbPath = "mongodb://" + cfgTemplate.Database.Host + ":" + cfgTemplate.Database.Port
 
 	client, clientErr := mongo.NewClient(options.Client().ApplyURI(dbPath))
 	if clientErr != nil {
-		logrus.Fatal(clientErr)
+		log.Fatal(clientErr)
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	ctxErr := client.Connect(ctx)
 	if ctxErr != nil {
-		logrus.Fatal(ctxErr)
+		log.Fatal(ctxErr)
 	}
 	defer client.Disconnect(ctx)
 
 	pingErr := client.Ping(ctx, readpref.Primary())
 	if pingErr != nil {
-		logrus.Fatal(pingErr)
+		log.Fatal(pingErr)
 	}
-	logrus.Info("Database connected!")
+	log.Info("Database connected!")
 	dbClient = client.Database(cfgTemplate.Database.Dbname)
 
 }
 
 func SetLogConfig() {
+
+	log.Info("Setting up logging service...")
 	if envMap.Env == "prod" {
-		logrus.SetLevel(logrus.InfoLevel)
+		log.SetLevel(log.InfoLevel)
+		logrus.SetFormatter(&log.JSONFormatter{})
+	} else {
+		log.SetLevel(log.DebugLevel)
+		logrus.SetFormatter(&log.TextFormatter{
+			DisableColors: true,
+			FullTimestamp: true,
+		})
 	}
-	logrus.SetLevel(logrus.DebugLevel)
-	logrus.Info("Setting up logging service...")
+
 }
 
 func GetEnvInfo() (config ConfigTemplate) {

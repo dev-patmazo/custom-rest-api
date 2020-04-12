@@ -1,32 +1,28 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"rest-api/config"
+	"rest-api/router"
 
-	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	"goji.io"
-	"goji.io/pat"
 )
 
-var cfg config.ConfigTemplate
+var (
+	cfg config.ConfigTemplate
+	mux *goji.Mux
+)
 
 func init() {
-	config.SetLogConfig()
 	config.SetEnvConfig()
 	config.SetDBCOnfig()
+	config.SetLogConfig()
+	mux = router.EndPoints()
 	cfg = config.GetEnvInfo()
 }
 
-func hello(w http.ResponseWriter, r *http.Request) {
-	name := pat.Param(r, "name")
-	fmt.Fprintf(w, "Hello, %s!", name)
-}
-
 func main() {
-	mux := goji.NewMux()
-	mux.HandleFunc(pat.Get("/hello/:name"), hello)
-	logrus.Info("Application is up and running on port : " + cfg.Server.Port)
-	http.ListenAndServe("localhost:8080", mux)
+	log.Info("Application is up and running on port : " + cfg.Server.Port)
+	http.ListenAndServe(cfg.Server.Host+":"+cfg.Server.Port, mux)
 }
