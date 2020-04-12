@@ -161,6 +161,10 @@ func GetEnvInfo() (config ConfigTemplate) {
 	return cfgTemplate
 }
 
+/*
+	Use this function to start your database
+	transaction. See : https://github.com/mongodb/mongo-go-driver
+*/
 func GetDBClient() *mongo.Database {
 	return dbClient
 }
