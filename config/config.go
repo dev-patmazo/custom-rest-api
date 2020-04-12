@@ -1,16 +1,19 @@
 package config
 
 import (
+	"context"
 	"io/ioutil"
 	"path/filepath"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/pelletier/go-toml"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"gopkg.in/yaml.v2"
 )
-
-var logger = Logger()
 
 type Server struct {
 	Host string `yaml:"host"`
@@ -18,6 +21,7 @@ type Server struct {
 }
 
 type Database struct {
+	Host     string `yaml:"host"`
 	Username string `yaml:"user"`
 	Password string `yaml:"pass"`
 	Port     string `yaml:"port"`
@@ -62,46 +66,45 @@ var (
 	basePath    = "../rest-api/"
 	configPath  = basePath + "config/config.yaml"
 	envPath     = basePath + ".air.conf"
+	dbClient    *mongo.Database
 )
 
-func init() {
-
-	logrus.SetLevel(logrus.WarnLevel)
+func SetEnvConfig() {
 
 	//Open config file
 	cfg, cfgErr := filepath.Abs(configPath)
 	if cfgErr != nil {
-		logger.Error(cfgErr)
+		logrus.Error(cfgErr)
 	}
 
 	//Read config file
 	cfgCons, cfgConsErr := ioutil.ReadFile(cfg)
 	if cfgConsErr != nil {
-		logger.Error(cfgConsErr)
+		logrus.Error(cfgConsErr)
 	}
 
 	//Parse config file content
 	cfgRawErr := yaml.Unmarshal(cfgCons, &cfgMap)
 	if cfgRawErr != nil {
-		logger.Error(cfgRawErr)
+		logrus.Error(cfgRawErr)
 	}
 
 	//Open environment file
 	env, envErr := filepath.Abs(envPath)
 	if envErr != nil {
-		logger.Error(envErr)
+		logrus.Error(envErr)
 	}
 
 	//Read environment file
 	envCons, envConsErr := ioutil.ReadFile(env)
 	if envConsErr != nil {
-		logger.Error(envConsErr)
+		logrus.Error(envConsErr)
 	}
 
 	//Parse environment file content
 	envRawErr := toml.Unmarshal(envCons, &envMap)
 	if envRawErr != nil {
-		logger.Error(envRawErr)
+		logrus.Error(envRawErr)
 	}
 
 	if envMap.Env == "dev" {
@@ -117,17 +120,47 @@ func init() {
 		cfgTemplate = cfgMap.Prod
 	}
 
+	logrus.Info("Setting up environment config...")
+
 }
 
-func InitializeConfig() (config ConfigTemplate) {
+func SetDBCOnfig() {
+	logrus.Info("Setting up database connection...")
+	var dbPath = "mongodb://" + cfgTemplate.Database.Host + ":" + cfgTemplate.Database.Port
+
+	client, clientErr := mongo.NewClient(options.Client().ApplyURI(dbPath))
+	if clientErr != nil {
+		logrus.Fatal(clientErr)
+	}
+
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctxErr := client.Connect(ctx)
+	if ctxErr != nil {
+		logrus.Fatal(ctxErr)
+	}
+	defer client.Disconnect(ctx)
+
+	pingErr := client.Ping(ctx, readpref.Primary())
+	if pingErr != nil {
+		logrus.Fatal(pingErr)
+	}
+	logrus.Info("Database connected!")
+	dbClient = client.Database(cfgTemplate.Database.Dbname)
+
+}
+
+func SetLogConfig() {
+	if envMap.Env == "prod" {
+		logrus.SetLevel(logrus.InfoLevel)
+	}
+	logrus.SetLevel(logrus.DebugLevel)
+	logrus.Info("Setting up logging service...")
+}
+
+func GetEnvInfo() (config ConfigTemplate) {
 	return cfgTemplate
 }
 
-func Logger() *logrus.Logger {
-	if envMap.Env == "prod" {
-		log := logrus.New()
-		log.SetLevel(logrus.PanicLevel)
-		return log
-	}
-	return logrus.New()
+func GetDBClient() *mongo.Database {
+	return dbClient
 }

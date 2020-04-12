@@ -29,6 +29,7 @@ Install or pull all required dependencies.
 3. go get gopkg.in/yaml.v2
 4. go get -u github.com/cosmtrek/air
 5. go get github.com/sirupsen/logrus
+6. go get go.mongodb.org/mongo-driver/mongo
 ```
 
 ### Deployment
