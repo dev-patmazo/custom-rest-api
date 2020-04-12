@@ -3,6 +3,11 @@
 # Set environment type
 ENV=$1
 
+if [[ ! -e .air.conf ]]; then
+    touch .air.conf
+    echo "env = prod" >> .air.conf
+fi
+
 if [ $ENV == "dev" ]
 then
     sed -i '/^env /s/=.*$/= "'$ENV'"/' .air.conf && air -d
