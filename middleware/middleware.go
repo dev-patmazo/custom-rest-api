@@ -2,7 +2,9 @@ package middleware
 
 import (
 	"encoding/json"
-	"fmt"
+	"net/http"
+	"rest-api/helper"
+	"strings"
 	"time"
 
 	"github.com/cristalhq/jwt"
@@ -23,8 +25,10 @@ var claims = &jwt.StandardClaims{
 	Audience:  audience,
 	ExpiresAt: jwt.Timestamp(expiry),
 }
-var sampleToken *jwt.Token
-var testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJjb21wYW55LWV4YW1wbGUiLCJleHAiOjE1ODY3OTg0MjYsImp0aSI6IjRGNjczNTNDOTc2MkNCQzciLCJpc3MiOiJwYXR6LmdhcmNpYSJ9.W4HIxAtASQ8a3Jjxs2R8lHMJIlgheLOhp3aTIhK4i8s"
+
+var message = make(map[string]interface{})
+
+var testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJjb21wYW55LWV4YW1wbGUiLCJleHAiOjE1ODY4Nzc3OTQsImp0aSI6IjRGNjczNTNDOTc2MkNCQzciLCJpc3MiOiJwYXR6LmdhcmNpYSJ9.cKTRonb1yAw86EqHs321Vo7BsJKIIPEFf8Do3Psij6g"
 
 func Tokenizer() {
 
@@ -32,15 +36,19 @@ func Tokenizer() {
 	builder := jwt.NewTokenBuilder(signer)
 
 	token, _ := builder.Build(claims)
-	//raw := token.Raw()
-	fmt.Println(token)
-	sampleToken = token
+	log.Debug(string(token.Raw()))
 }
 
 func Detokenizer() {
 
+	checkToken, err := jwt.Parse([]byte(testToken))
+	if err != nil {
+		log.Debug(err)
+		return
+	}
+
 	newClaim := &jwt.StandardClaims{}
-	_ = json.Unmarshal(sampleToken.RawClaims(), newClaim)
+	_ = json.Unmarshal(checkToken.RawClaims(), newClaim)
 
 	validator := jwt.NewValidator(
 		jwt.IDChecker(newClaim.ID),
@@ -49,9 +57,53 @@ func Detokenizer() {
 		jwt.ExpirationTimeChecker(time.Now()),
 	)
 
-	err := validator.Validate(newClaim)
+	err = validator.Validate(claims)
 	if err != nil {
-		log.Error(err)
+		log.Debug(err)
+		return
 	}
+
+}
+
+func Interceptor(inner http.Handler) http.Handler {
+
+	claimContainer := &jwt.StandardClaims{}
+
+	mw := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		auth := r.Header.Get("Authorization")
+		bearer := strings.Split(auth, "Bearer")
+		token := strings.TrimSpace(bearer[1])
+
+		rawToken, parseErr := jwt.Parse([]byte(token))
+		if parseErr != nil {
+			log.Debug(parseErr)
+			message["code"] = http.StatusUnauthorized
+			message["status"] = http.StatusText(http.StatusUnauthorized)
+			helper.Response(message, w)
+			return
+		}
+
+		_ = json.Unmarshal(rawToken.RawClaims(), claimContainer)
+
+		validator := jwt.NewValidator(
+			jwt.IDChecker(claimContainer.ID),
+			jwt.IssuerChecker(claimContainer.Issuer),
+			jwt.AudienceChecker(claimContainer.Audience),
+			jwt.ExpirationTimeChecker(time.Now()),
+		)
+
+		validErr := validator.Validate(claims)
+		if validErr != nil {
+			log.Debug(validErr)
+			message["code"] = http.StatusUnauthorized
+			message["status"] = http.StatusText(http.StatusUnauthorized)
+			helper.Response(message, w)
+			return
+		}
+	}
+
+	return http.HandlerFunc(mw)
 
 }
