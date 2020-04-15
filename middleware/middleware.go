@@ -28,41 +28,13 @@ var claims = &jwt.StandardClaims{
 
 var message = make(map[string]interface{})
 
-var testToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJjb21wYW55LWV4YW1wbGUiLCJleHAiOjE1ODY4Nzc3OTQsImp0aSI6IjRGNjczNTNDOTc2MkNCQzciLCJpc3MiOiJwYXR6LmdhcmNpYSJ9.cKTRonb1yAw86EqHs321Vo7BsJKIIPEFf8Do3Psij6g"
-
+// Configure this for session usage
 func Tokenizer() {
-
 	signer, _ := jwt.NewHS256([]byte(secretKey))
 	builder := jwt.NewTokenBuilder(signer)
 
 	token, _ := builder.Build(claims)
 	log.Debug(string(token.Raw()))
-}
-
-func Detokenizer() {
-
-	checkToken, err := jwt.Parse([]byte(testToken))
-	if err != nil {
-		log.Debug(err)
-		return
-	}
-
-	newClaim := &jwt.StandardClaims{}
-	_ = json.Unmarshal(checkToken.RawClaims(), newClaim)
-
-	validator := jwt.NewValidator(
-		jwt.IDChecker(newClaim.ID),
-		jwt.IssuerChecker(newClaim.Issuer),
-		jwt.AudienceChecker(newClaim.Audience),
-		jwt.ExpirationTimeChecker(time.Now()),
-	)
-
-	err = validator.Validate(claims)
-	if err != nil {
-		log.Debug(err)
-		return
-	}
-
 }
 
 func Interceptor(inner http.Handler) http.Handler {
@@ -87,20 +59,28 @@ func Interceptor(inner http.Handler) http.Handler {
 
 		_ = json.Unmarshal(rawToken.RawClaims(), claimContainer)
 
-		validator := jwt.NewValidator(
-			jwt.IDChecker(claimContainer.ID),
-			jwt.IssuerChecker(claimContainer.Issuer),
-			jwt.AudienceChecker(claimContainer.Audience),
-			jwt.ExpirationTimeChecker(time.Now()),
-		)
+		log.Debug(claimContainer.IsExpired(time.Now()))
 
-		validErr := validator.Validate(claims)
-		if validErr != nil {
-			log.Debug(validErr)
+		if claimContainer.IsExpired(time.Now()) {
 			message["code"] = http.StatusUnauthorized
 			message["status"] = http.StatusText(http.StatusUnauthorized)
 			helper.Response(message, w)
 			return
+		} else {
+			validator := jwt.NewValidator(
+				jwt.IDChecker(claimContainer.ID),
+				jwt.IssuerChecker(claimContainer.Issuer),
+				jwt.AudienceChecker(claimContainer.Audience),
+			)
+
+			validErr := validator.Validate(claims)
+			if validErr != nil {
+				log.Debug(validErr)
+				message["code"] = http.StatusUnauthorized
+				message["status"] = http.StatusText(http.StatusUnauthorized)
+				helper.Response(message, w)
+				return
+			}
 		}
 	}
 

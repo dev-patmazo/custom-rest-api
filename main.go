@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"rest-api/config"
-	"rest-api/middleware"
 	"rest-api/router"
 
 	log "github.com/sirupsen/logrus"
@@ -21,10 +20,6 @@ func init() {
 	config.SetLogConfig()
 	mux = router.EndPoints()
 	cfg = config.GetEnvInfo()
-
-	//test
-	middleware.Tokenizer()
-	middleware.Detokenizer()
 }
 
 func main() {
