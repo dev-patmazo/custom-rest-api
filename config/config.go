@@ -73,39 +73,35 @@ var (
 func SetEnvConfig() {
 
 	//Open config file
-	cfg, cfgErr := filepath.Abs(configPath)
-	if cfgErr != nil {
+	if cfg, cfgErr := filepath.Abs(configPath); cfgErr != nil {
 		log.Error(cfgErr)
-	}
-
-	//Read config file
-	cfgCons, cfgConsErr := ioutil.ReadFile(cfg)
-	if cfgConsErr != nil {
-		log.Error(cfgConsErr)
-	}
-
-	//Parse config file content
-	cfgRawErr := yaml.Unmarshal(cfgCons, &cfgMap)
-	if cfgRawErr != nil {
-		log.Error(cfgRawErr)
+	} else {
+		//Read config file
+		if cfgCons, cfgConsErr := ioutil.ReadFile(cfg); cfgConsErr != nil {
+			log.Error(cfgConsErr)
+		} else {
+			//Parse config file content
+			cfgRawErr := yaml.Unmarshal(cfgCons, &cfgMap)
+			if cfgRawErr != nil {
+				log.Error(cfgRawErr)
+			}
+		}
 	}
 
 	//Open environment file
-	env, envErr := filepath.Abs(envPath)
-	if envErr != nil {
+	if env, envErr := filepath.Abs(envPath); envErr != nil {
 		log.Error(envErr)
-	}
-
-	//Read environment file
-	envCons, envConsErr := ioutil.ReadFile(env)
-	if envConsErr != nil {
-		log.Error(envConsErr)
-	}
-
-	//Parse environment file content
-	envRawErr := toml.Unmarshal(envCons, &envMap)
-	if envRawErr != nil {
-		log.Error(envRawErr)
+	} else {
+		//Read environment file
+		if envCons, envConsErr := ioutil.ReadFile(env); envConsErr != nil {
+			log.Error(envConsErr)
+		} else {
+			//Parse environment file content
+			envRawErr := toml.Unmarshal(envCons, &envMap)
+			if envRawErr != nil {
+				log.Error(envRawErr)
+			}
+		}
 	}
 
 	if envMap.Env == "dev" {
