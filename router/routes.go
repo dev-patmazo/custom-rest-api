@@ -9,9 +9,12 @@ import (
 )
 
 func EndPoints() (mux *goji.Mux) {
-	mux = goji.NewMux()
-	mux.Use(middleware.Interceptor)
-	mux.HandleFunc(pat.Get("/hello/:name"), controller.Hello)
+
+	//public := goji.NewMux() For open apis
+
+	private := goji.NewMux()
+	private.Use(middleware.Interceptor)
+	private.HandleFunc(pat.Get("/hello/:name"), controller.Hello)
 
 	return mux
 }
